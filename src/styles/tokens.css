@@ -1,0 +1,118 @@
+/* ==========================================================================
+   Arcane Sanctum Design System Tokens (Synced with Figma Variable Collection)
+   Aesthetic Reference: Immersive Garden — Editorial Minimalism × Techno-Mage
+   ========================================================================== */
+
+:root {
+  /* Surfaces & Atmosphere */
+  --bg-obsidian: #070912;
+  --bg-glass-dark: rgba(10, 14, 27, 0.78);
+  --bg-glass-elevated: rgba(17, 23, 43, 0.88);
+  --bg-card-subtle: rgba(22, 30, 54, 0.62);
+
+  /* Arcane Accents */
+  --accent-gold: #d8b268;
+  --accent-gold-bright: #f2d28b;
+  --accent-cyan: #38d9f5;
+  --accent-cyan-deep: #0e7490;
+  --accent-ruby: #e84a5f;
+  --accent-emerald: #34d399;
+  --accent-violet: #a78bfa;
+
+  /* Editorial Typography Colors */
+  --text-primary: #f4f1ea;
+  --text-secondary: #a8b5ce;
+  --text-muted: #6e7c99;
+
+  /* Hairlines & Borders */
+  --border-gold-hairline: rgba(216, 178, 104, 0.30);
+  --border-gold-active: rgba(232, 199, 123, 0.68);
+  --border-cyan-hairline: rgba(56, 217, 245, 0.32);
+  --border-glass-subtle: rgba(255, 255, 255, 0.10);
+
+  /* Spacing & Radii */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* Font Stacks */
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Shadows & Glows */
+  --shadow-glass: 0 18px 42px -4px rgba(2, 5, 15, 0.68);
+  --glow-gold: 0 0 22px rgba(216, 178, 104, 0.28);
+  --glow-cyan: 0 0 20px rgba(56, 217, 245, 0.32);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-obsidian);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+@media (pointer: fine) {
+  body.custom-cursor-active,
+  body.custom-cursor-active a,
+  body.custom-cursor-active button {
+    cursor: none !important;
+  }
+}
+
+.glass-panel {
+  background: var(--bg-glass-dark);
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+  border: 1px solid var(--border-gold-hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Custom subtle scrollbars for station drawers */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(216, 178, 104, 0.35);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 210, 139, 0.65);
+}
