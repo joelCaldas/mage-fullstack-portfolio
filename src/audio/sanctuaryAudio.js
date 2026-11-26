@@ -1,65 +1,71 @@
+import { assetUrl } from '../utils/assetUrl.js';
+
 /**
- * Motor de Áudio Espacial Procedural (Web Audio API) — Zero dependências externas.
- * Gera atmosfera mística contínua (drone harmônico obsidiana/arcano) e micro-SFX
- * sutis ao navegar entre estações ou virar páginas no carrossel.
+ * Motor de Áudio do Santuário:
+ * - Trilha principal cinematográfica de fundo (public/audio/sanctuary-theme.mp3) em loop suave
+ *   com fade-in / fade-out orgânico ao clicar em "Entrar no Santuário" ou "SOM ON/OFF".
+ * - Micro-SFX arcanos sutis via Web Audio API ao navegar entre estações e virar páginas.
  */
 
 class SanctuaryAudioEngine {
   constructor() {
     this.ctx = null;
-    this.masterGain = null;
-    this.ambientGain = null;
-    this.oscillators = [];
+    this.sfxGain = null;
+    this.bgmAudio = null;
+    this.fadeInterval = null;
+    this.targetVolume = 0.42;
     this.enabled = false;
     this.initialized = false;
   }
 
   init() {
     if (this.initialized) return;
+
+    // 1. Trilha musical de fundo (HTML5 Audio com loop nativo estável em desktop & mobile)
+    const audio = new Audio(assetUrl('audio/sanctuary-theme.mp3'));
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.volume = 0;
+    this.bgmAudio = audio;
+
+    // 2. Contexto Web Audio leve apenas para os micro-SFX interativos
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-
-    this.ctx = new AudioCtx();
-    this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.value = 0.0;
-    this.masterGain.connect(this.ctx.destination);
-
-    // Low-pass filter for warm mystical library acoustics
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 540;
-    filter.Q.value = 1.2;
-
-    this.ambientGain = this.ctx.createGain();
-    this.ambientGain.gain.value = 0.14;
-    this.ambientGain.connect(filter);
-    filter.connect(this.masterGain);
-
-    // Subtle fifth + octave arcane chord (D2, A2, F#3, A3) with ultra-slow LFO shimmer
-    const freqs = [73.42, 110.0, 146.83, 220.0];
-    freqs.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
-      osc.frequency.value = freq;
-      gain.gain.value = idx < 2 ? 0.32 : 0.12;
-
-      // Subtle breathing LFO
-      const lfo = this.ctx.createOscillator();
-      const lfoGain = this.ctx.createGain();
-      lfo.frequency.value = 0.08 + idx * 0.03;
-      lfoGain.gain.value = gain.gain.value * 0.25;
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-
-      osc.connect(gain);
-      gain.connect(this.ambientGain);
-      osc.start();
-      lfo.start();
-      this.oscillators.push(osc, lfo);
-    });
+    if (AudioCtx) {
+      this.ctx = new AudioCtx();
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = 0.45;
+      this.sfxGain.connect(this.ctx.destination);
+    }
 
     this.initialized = true;
+  }
+
+  fadeBgmTo(targetVol, durationMs = 700, pauseOnZero = false) {
+    if (!this.bgmAudio) return;
+    if (this.fadeInterval) {
+      clearInterval(this.fadeInterval);
+      this.fadeInterval = null;
+    }
+
+    const startVol = this.bgmAudio.volume;
+    const steps = 24;
+    const stepMs = Math.max(15, durationMs / steps);
+    let step = 0;
+
+    this.fadeInterval = setInterval(() => {
+      step += 1;
+      const t = Math.min(1, step / steps);
+      const nextVol = startVol + (targetVol - startVol) * t;
+      this.bgmAudio.volume = Math.max(0, Math.min(1, nextVol));
+
+      if (t >= 1) {
+        clearInterval(this.fadeInterval);
+        this.fadeInterval = null;
+        if (pauseOnZero && targetVol <= 0.001) {
+          this.bgmAudio.pause();
+        }
+      }
+    }, stepMs);
   }
 
   async setEnabled(on) {
@@ -67,63 +73,77 @@ class SanctuaryAudioEngine {
     if (this.enabled && !this.initialized) {
       this.init();
     }
-    if (!this.ctx || !this.masterGain) return;
-    if (this.ctx.state === 'suspended' && this.enabled) {
-      await this.ctx.resume();
+
+    if (this.ctx && this.ctx.state === 'suspended' && this.enabled) {
+      try {
+        await this.ctx.resume();
+      } catch {
+        // Ignora bloqueio antes de gesto do usuário
+      }
     }
-    const now = this.ctx.currentTime;
-    this.masterGain.gain.cancelScheduledValues(now);
-    this.masterGain.gain.setTargetAtTime(this.enabled ? 0.55 : 0.0, now, 0.35);
+
+    if (this.bgmAudio) {
+      if (this.enabled) {
+        try {
+          await this.bgmAudio.play();
+          this.fadeBgmTo(this.targetVolume, 850, false);
+        } catch {
+          // Navegador pode exigir novo clique caso bloqueie autoplay
+        }
+      } else {
+        this.fadeBgmTo(0, 450, true);
+      }
+    }
   }
 
   playNavigate() {
-    if (!this.enabled || !this.ctx || !this.masterGain) return;
+    if (!this.enabled || !this.ctx || !this.sfxGain) return;
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(293.66, now); // D4
-    osc.frequency.exponentialRampToValueAtTime(587.33, now + 0.36); // D5
+    osc.frequency.setValueAtTime(293.66, now);
+    osc.frequency.exponentialRampToValueAtTime(587.33, now + 0.32);
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.11, now + 0.06);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.62);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.55);
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
     osc.start(now);
-    osc.stop(now + 0.65);
+    osc.stop(now + 0.58);
   }
 
   playPageTurn() {
-    if (!this.enabled || !this.ctx || !this.masterGain) return;
+    if (!this.enabled || !this.ctx || !this.sfxGain) return;
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(440, now);
-    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.14);
+    osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.12);
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.065, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.22);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.2);
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
     osc.start(now);
-    osc.stop(now + 0.24);
+    osc.stop(now + 0.22);
   }
 
   playHover() {
-    if (!this.enabled || !this.ctx || !this.masterGain) return;
+    if (!this.enabled || !this.ctx || !this.sfxGain) return;
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(784, now);
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.025, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.09);
+    gain.gain.linearRampToValueAtTime(0.02, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0005, now + 0.08);
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
     osc.start(now);
-    osc.stop(now + 0.1);
+    osc.stop(now + 0.09);
   }
 }
 
